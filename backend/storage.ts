@@ -1,4 +1,5 @@
 import pg from 'pg';
+import {validateDatabaseUrl} from './database-config.js';
 import type {Interaction} from '../shared/schema.js';
 export interface InteractionStore {record(event:Interaction):Promise<boolean>;counts():Promise<Map<string,number>>;health():Promise<boolean>}
 export class MemoryInteractionStore implements InteractionStore {
@@ -10,7 +11,7 @@ export class MemoryInteractionStore implements InteractionStore {
 }
 export class PostgresInteractionStore implements InteractionStore {
  pool:pg.Pool;
- constructor(connectionString:string){this.pool=new pg.Pool({connectionString,max:5,connectionTimeoutMillis:5000,statement_timeout:5000});this.pool.on('error',()=>console.error('Database pool connection error'));}
+ constructor(connectionString:string){this.pool=new pg.Pool({connectionString:validateDatabaseUrl(connectionString),max:5,connectionTimeoutMillis:5000,statement_timeout:5000});this.pool.on('error',()=>console.error('Database pool connection error'));}
  async record(e:Interaction){const r=await this.pool.query('INSERT INTO interaction_events(place_id,event_type,session_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id',[e.placeId,e.eventType,e.sessionId]);return !!r.rowCount;}
  async counts(){const r=await this.pool.query("SELECT place_id,COUNT(DISTINCT session_id)::int AS count FROM interaction_events WHERE created_at > now() - interval '7 days' GROUP BY place_id");return new Map<string,number>(r.rows.map(r=>[r.place_id,r.count]));}
  async health(){await this.pool.query('SELECT 1 FROM interaction_events LIMIT 1');return true;}
