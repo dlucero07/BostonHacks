@@ -1,0 +1,25 @@
+import express from 'express';
+import helmet from 'helmet';
+import {rateLimit} from 'express-rate-limit';
+import {z,ZodError} from 'zod';
+import path from 'node:path';
+import {journeySchema,searchSchema,stopSchema,interactionSchema,type Config} from '../shared/schema.js';
+import {AppError,type Provider} from './providers/types.js';
+import type {InteractionStore} from './storage.js';
+import {JourneyService} from './service.js';
+export function createApp(provider:Provider,store:InteractionStore,config:Config){const app=express();const service=new JourneyService(provider,store);
+ app.set('trust proxy',process.env.NODE_ENV==='production'?1:false);
+ app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'",...(config.mode==='live'?["'unsafe-eval'","blob:"]:[]),"https://*.googleapis.com","https://*.gstatic.com","https://*.google.com","https://*.ggpht.com","https://*.googleusercontent.com"],connectSrc:["'self'","https://*.googleapis.com","https://*.gstatic.com","https://*.google.com"],imgSrc:["'self'","data:","https://*.googleapis.com","https://*.gstatic.com","https://*.google.com","https://*.googleusercontent.com"],styleSrc:["'self'","'unsafe-inline'","https://fonts.googleapis.com"],fontSrc:["'self'","https://fonts.gstatic.com"],workerSrc:["'self'","blob:"],frameSrc:["https://*.google.com"]}},crossOriginEmbedderPolicy:false}));
+ app.use('/api',express.json({limit:'20kb'}));app.use('/api',(_req,res,next)=>{res.setHeader('Cache-Control','no-store');next();});
+ app.get('/api/health',async(_req,res)=>{try{await store.health();res.json({status:'ok',mode:config.mode,storage:store.constructor.name});}catch{res.status(503).json({status:'degraded',error:{code:'DATABASE_UNAVAILABLE',message:'Database connection or schema unavailable.'}});}});
+ app.use('/api',rateLimit({windowMs:60000,limit:90,standardHeaders:'draft-8',legacyHeaders:false,handler:(_req,res)=>res.status(429).json({error:{code:'RATE_LIMITED',message:'Too many requests. Wait a minute before trying again.'}})}));
+ app.get('/api/config',(_req,res)=>res.json(config));
+ app.post('/api/routes',async(req,res)=>res.json(await service.create(journeySchema.parse(req.body))));
+ app.post('/api/restaurants/search',async(req,res)=>{const input=searchSchema.parse(req.body);res.json(await service.search(input.journeyId,input.filters));});
+ app.post('/api/routes/with-stop',async(req,res)=>{const input=stopSchema.parse(req.body);res.json(await service.stop(input.journeyId,input.placeId));});
+ app.post('/api/places/details',async(req,res)=>{const input=stopSchema.parse(req.body);res.json(await service.details(input.journeyId,input.placeId));});
+ app.post('/api/interactions',async(req,res)=>res.json({recorded:await store.record(interactionSchema.parse(req.body))}));
+ app.use('/api',(_req,res)=>res.status(404).json({error:{code:'NOT_FOUND',message:'API endpoint not found.'}}));
+ app.use(express.static(path.resolve('dist/public')));app.get('/{*path}',(_req,res)=>res.sendFile(path.resolve('dist/public/index.html')));
+ app.use((error:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{if(error instanceof ZodError)return res.status(400).json({error:{code:'INVALID_REQUEST',message:'Check the request fields.',fields:z.flattenError(error)}});if(error instanceof AppError)return res.status(error.status).json({error:{code:error.code,message:error.message}});if(error instanceof SyntaxError)return res.status(400).json({error:{code:'INVALID_JSON',message:'Request body must be valid JSON.'}});console.error('Request failed:',error instanceof Error?error.name:'unknown');res.status(500).json({error:{code:'INTERNAL_ERROR',message:'Something went wrong. Please try again.'}});});return app;
+}
