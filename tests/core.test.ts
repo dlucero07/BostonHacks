@@ -32,3 +32,35 @@ test('search shortlists and returns ten food stops from twenty candidates',async
  assert.equal(result.restaurants.length,10);assert.equal(stopRoutes,10);assert.deepEqual(new Set(result.restaurants.map(p=>p.id)),new Set(candidates.slice(10).map(p=>p.id)));assert(result.restaurants.every((p,i,list)=>i===0||list[i-1].score>=p.score));
  assert.equal('vegetarian' in filterSchema.parse({vegetarian:true}),false);
 });
+
+test('multiple stops route through every stop in order, with removal and baseline reset',async()=>{
+ for(const mode of ['WALK','DRIVE','TRAIN','BUS'] as const){
+ const service=new JourneyService(new DemoProvider(),new MemoryInteractionStore());const journey=await service.create({...input,mode});await service.search(journey.id,filters);
+ const ids=['demo-1','demo-2','demo-3'];const result=await service.stops(journey.id,ids);let previous=-1;
+ for(const id of ids){const p=demoPlaces.find(p=>p.id===id)!;const index=result.route.path.findIndex(x=>x.lat===p.point.lat&&x.lng===p.point.lng);assert(index>previous);previous=index;}
+ assert.equal(result.extraSeconds,result.route.durationSeconds-journey.baseline.durationSeconds);
+ const single=await service.stop(journey.id,ids[0]);assert(result.route.durationSeconds>single.route.durationSeconds);
+ const removed=await service.stops(journey.id,[ids[0],ids[2]]);assert(removed.route.durationSeconds<result.route.durationSeconds);assert(!removed.route.path.some(p=>p.lat===demoPlaces[1].point.lat&&p.lng===demoPlaces[1].point.lng));
+ if(mode==='TRAIN'||mode==='BUS')assert.equal(result.route.segments?.filter(s=>s.travelMode==='TRANSIT').length,4);
+ await service.search(journey.id,{...filters,category:'bakery'});assert.deepEqual(await service.stops(journey.id,ids),result);
+ assert.deepEqual(await service.stops(journey.id,[]),{route:journey.baseline,extraSeconds:0});
+ await assert.rejects(service.stops(journey.id,['missing']),/Search this journey/);await assert.rejects(service.stops(journey.id,[ids[0],ids[0]]),/unique/);
+ }
+});
+
+test('multi-stop endpoint validates ordered unique stops and supports clearing them',async()=>{
+ const server=createApp(new DemoProvider(),new MemoryInteractionStore(),{mode:'demo'}).listen(0,'127.0.0.1');await new Promise<void>(resolve=>server.once('listening',resolve));const address=server.address();if(!address||typeof address==='string')throw new Error('No address');
+ const post=(path:string,body:unknown)=>fetch(`http://127.0.0.1:${address.port}/api`+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+ try{const journey=await (await post('/routes',input)).json();await post('/restaurants/search',{journeyId:journey.id,filters});
+ const body={journeyId:journey.id,placeIds:['demo-1','demo-2']};const response=await post('/routes/with-stops',body);assert.equal(response.status,200);const multi=await response.json();assert(multi.extraSeconds>0);
+ assert.equal((await post('/routes/with-stops',{...body,placeIds:['demo-1','demo-1']})).status,400);assert.equal((await post('/routes/with-stops',{...body,placeIds:Array.from({length:10},(_,i)=>String(i))})).status,400);assert.equal((await post('/routes/with-stops',{...body,placeIds:['missing']})).status,404);
+ const cleared=await (await post('/routes/with-stops',{...body,placeIds:[]})).json();assert.deepEqual(cleared,{route:journey.baseline,extraSeconds:0});
+ }finally{server.closeAllConnections();await new Promise<void>((resolve,reject)=>server.close(e=>e?reject(e):resolve()));}
+});
+
+test('food-stop routes keep the baseline endpoints instead of geocoding ambiguous names again',async()=>{
+ const provider=new DemoProvider();const route=provider.route.bind(provider);let direct=true;
+ provider.route=async(input,stop,additional)=>{if(!direct){assert.deepEqual(input.origin.point,{lat:42.3505,lng:-71.1054});assert.deepEqual(input.destination.point,{lat:42.355,lng:-71.0656});}return route(input,stop,additional);};
+ const service=new JourneyService(provider,new MemoryInteractionStore());const journey=await service.create(input);direct=false;await service.search(journey.id,filters);
+ for(const ids of [['demo-4'],['demo-3'],['demo-6'],['demo-4','demo-3','demo-6']]){const result=await service.stops(journey.id,ids);assert.deepEqual(result.route.path[0],journey.baseline.path[0]);assert.deepEqual(result.route.path.at(-1),journey.baseline.path.at(-1));}
+});
