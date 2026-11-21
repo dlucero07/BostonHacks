@@ -1,0 +1,5 @@
+export async function api<T>(path:string,body?:unknown,signal?:AbortSignal):Promise<T>{const response=await fetch('/api'+path,{method:body===undefined?'GET':'POST',headers:body===undefined?undefined:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:signal??AbortSignal.timeout(45000)});let data;try{data=await response.json();}catch{throw new Error('The server did not return a usable response. Check that the API is running.');}if(!response.ok)throw new Error(data.error?.message??'Request failed. Please try again.');return data;}
+export const minutes=(seconds:number)=>Math.ceil(seconds/60);
+export const distance=(meters:number)=>`${(meters/1609.344).toFixed(1)} mi`;
+let sessionId:string;
+export function track(placeId:string,eventType:'select'|'details'|'add_stop'){try{sessionId??=sessionStorage.getItem('otg-session')??crypto.randomUUID();sessionStorage.setItem('otg-session',sessionId);void api('/interactions',{placeId,eventType,sessionId}).catch(()=>{});}catch{/* Browsing works when session storage is disabled. */}}
