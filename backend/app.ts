@@ -3,7 +3,7 @@ import helmet from 'helmet';
 import {rateLimit} from 'express-rate-limit';
 import {z,ZodError} from 'zod';
 import path from 'node:path';
-import {journeySchema,searchSchema,stopSchema,interactionSchema,type Config} from '../shared/schema.js';
+import {journeySchema,searchSchema,stopSchema,stopsSchema,interactionSchema,type Config} from '../shared/schema.js';
 import {AppError,type Provider} from './providers/types.js';
 import type {InteractionStore} from './storage.js';
 import {JourneyService} from './service.js';
@@ -17,6 +17,7 @@ export function createApp(provider:Provider,store:InteractionStore,config:Config
  app.post('/api/routes',async(req,res)=>res.json(await service.create(journeySchema.parse(req.body))));
  app.post('/api/restaurants/search',async(req,res)=>{const input=searchSchema.parse(req.body);res.json(await service.search(input.journeyId,input.filters));});
  app.post('/api/routes/with-stop',async(req,res)=>{const input=stopSchema.parse(req.body);res.json(await service.stop(input.journeyId,input.placeId));});
+ app.post('/api/routes/with-stops',async(req,res)=>{const input=stopsSchema.parse(req.body);res.json(await service.stops(input.journeyId,input.placeIds));});
  app.post('/api/places/details',async(req,res)=>{const input=stopSchema.parse(req.body);res.json(await service.details(input.journeyId,input.placeId));});
  app.post('/api/interactions',async(req,res)=>res.json({recorded:await store.record(interactionSchema.parse(req.body))}));
  app.use('/api',(_req,res)=>res.status(404).json({error:{code:'NOT_FOUND',message:'API endpoint not found.'}}));
