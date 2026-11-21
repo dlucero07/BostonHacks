@@ -12,7 +12,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Open http://localhost:5173. The API runs on port 3000; Vite proxies relative `/api` calls to it. Demo mode starts with Boston University → Boston Common. The six demo locations are offered in the inputs. Choose walking/driving, submit, select a card or marker, and add a stop. Compare both journeys and open the selected journey in Google Maps.
+Open http://localhost:5173. The API runs on port 3000; Vite proxies relative `/api` calls to it. Demo mode starts with Boston University → Boston Common. The six demo locations are offered in the inputs. Choose walking/driving/train/bus, submit, select a card or marker, and add a stop. Compare both journeys and open the selected journey in Google Maps.
 
 **Demo restaurants, ratings, review counts, prices, hours, routes, geometry, distances and travel times are fictional or simulated.** Demo routing is an illustrative provider, not a navigation engine. The Google Maps handoff opens the simulated coordinates, which are not real restaurant locations. No Google API is called in demo mode. Demo supports six named locations and Boston-area coordinates. Unknown free-text locations produce an actionable error. Live mode never falls back to demo data.
 
@@ -41,13 +41,13 @@ All placeholders are in **[.env.example](.env.example)**. Copy it to `.env` (Git
 4. Replace the Google placeholders in `.env`, set `APP_MODE=live`, configure/migrate Tiger Data below, and restart.
 5. Verify a live Boston journey and the browser console after deployment. Provider authentication, quota, timeout, invalid geometry and no-route failures are surfaced without synthetic substitutes.
 
-Uses [Routes computeRoutes](https://developers.google.com/maps/documentation/routes/reference/rest/v2/TopLevel/computeRoutes), [Text Search along a route](https://developers.google.com/maps/documentation/places/web-service/search-along-route), [Autocomplete Data (New)](https://developers.google.com/maps/documentation/javascript/place-autocomplete-data), and [Advanced Markers](https://developers.google.com/maps/documentation/javascript/advanced-markers/overview). Autocomplete requests debounce 300 ms with per-input session tokens, finishing the session with `fetchFields` after selection. Manual Boston addresses are supported if suggestions fail. Both walking and driving use Routes; driving uses `TRAFFIC_UNAWARE` for comparable baseline/stop estimates. Transit is intentionally outside this slice. Google may require showing walking-route warnings; the UI includes the provider walking safety notice in live mode.
+Uses [Routes computeRoutes](https://developers.google.com/maps/documentation/routes/reference/rest/v2/TopLevel/computeRoutes), [Text Search along a route](https://developers.google.com/maps/documentation/places/web-service/search-along-route), [Autocomplete Data (New)](https://developers.google.com/maps/documentation/javascript/place-autocomplete-data), and [Advanced Markers](https://developers.google.com/maps/documentation/javascript/advanced-markers/overview). Autocomplete requests debounce 300 ms with per-input session tokens, finishing the session with `fetchFields` after selection. Manual Boston addresses are supported if suggestions fail. Walking, driving, train, and bus use Routes; transit uses rail/bus preferences and Google may include other transport. Transit stop journeys combine two sequential requests with the second departing after the first leg. Switching modes automatically recalculates the journey and recommendations. driving uses `TRAFFIC_UNAWARE` for comparable baseline/stop estimates. Transit Google Maps handoff opens directions to the food stop; request onward directions after eating. Google may require showing walking-route warnings; the UI includes the provider walking safety notice in live mode.
 
 ### Costs, attribution and retention
 
-Search runs on submit or an explicit filter change, never on map movement. Text Search requests at most 12 candidates; inexpensive filters and place-ID deduplication precede at most six stop-route calculations with concurrency three. Stop routes are reused in the current journey. Details are fetched on demand. REST calls time out after 10 seconds with no automatic retries; quota/auth failures stop queued route work. Requests already in flight may complete. Autocomplete is sessionized and debounced.
+Search runs on submit or an explicit filter change, never on map movement. Text Search requests at most 20 candidates; inexpensive filters and place-ID deduplication precede at most ten stop-route calculations with concurrency three. Stop routes are reused in the current journey. Details are fetched on demand. Transit stop calculations use up to twenty leg requests for ten candidates. REST calls time out after 10 seconds with no automatic retries; quota/auth failures stop queued route work. Requests already in flight may complete. Autocomplete is sessionized and debounced.
 
-Field masks are explicit. Ratings, review counts, price and opening status trigger higher Places pricing tiers; vegetarian service fields can trigger Enterprise + Atmosphere pricing. Review the [field/SKU table](https://developers.google.com/maps/documentation/places/web-service/data-fields) before enabling live mode. Configure per-API quotas and Cloud Billing budgets/alerts in Google Cloud. **Budget alerts are notifications, not a spending cap.** Choose actual enforceable quotas appropriate to your account.
+Field masks are explicit. Ratings, review counts, price and opening status trigger higher Places pricing tiers; vegetarian support is temporarily disabled, and `servesVegetarianFood` is omitted from both search and details requests to avoid Enterprise + Atmosphere pricing. TODO comments in the provider mask, shared filter schema, and frontend filter UI mark where to restore support. Review the [field/SKU table](https://developers.google.com/maps/documentation/places/web-service/data-fields) before enabling live mode. Configure per-API quotas and Cloud Billing budgets/alerts in Google Cloud. **Budget alerts are notifications, not a spending cap.** Choose actual enforceable quotas appropriate to your account.
 
 Live results appear on a Google map; autocomplete includes the Google attribution logo. Google Maps links and returned third-party attributions are displayed in details. No provider reviews or complete raw responses are stored. Normalized place/route data, including origin and destination, exist only in bounded process memory, with a 15-minute journey expiry and maximum 300 journeys. No origin/destination history is written to PostgreSQL. First-party interaction events store only place ID, type, server timestamp and random session UUID. Apply [Google Places policies](https://developers.google.com/maps/documentation/places/web-service/policies) and your billing-region terms before public launch; EEA-specific terms may affect permitted displays. Deploy the supplied privacy and terms pages with your operator/contact information completed. The app intentionally does not request or store precise geolocation until the user clicks “Use my location.”
 
@@ -98,11 +98,11 @@ R = clamp((BayesianRating - 1) / 4, 0, 1)
 V = clamp(log(1 + n) / log(1 + 2000), 0, 1)
 I = clamp(log(1 + uniqueSessions7days) / log(1 + 50), 0, 1)
 popularity = 0.55R + 0.30V + 0.15I
-markerDiameter = 24 + 18 × popularity (pixels)
+markerDiameter = 24 + 40 × popularity² (pixels)
 relevance = 0.45 × popularity + 0.55 × (1 - clamp(extraSeconds / maxDetourSeconds, 0, 1))
 ```
 
-Unknown rating uses the 4.1 prior and unknown review count uses zero **for scoring only**; the UI shows unknown. Interaction popularity counts unique sessions per place across all event types in the last seven days, so clicking details and adding the same stop does not inflate it. Event types are individually deduplicated per session. Automatic/programmatic state changes do not record clicks. Empty interaction data contributes zero. No recent-review signal is used because coverage/timestamps are unavailable. Filter match is a hard gate: category, known price/rating thresholds, reported vegetarian availability and **maximum calculated detour** always override popularity. “Vegetarian options reported” does not guarantee suitability for a particular diet.
+Unknown rating uses the 4.1 prior and unknown review count uses zero **for scoring only**; the UI shows unknown. Interaction popularity counts unique sessions per place across all event types in the last seven days, so clicking details and adding the same stop does not inflate it. Event types are individually deduplicated per session. Automatic/programmatic state changes do not record clicks. Empty interaction data contributes zero. No recent-review signal is used because coverage/timestamps are unavailable. Filter match is a hard gate: category, known price/rating thresholds and **maximum calculated detour** always override popularity.
 
 ```
 extraTravelSeconds = max(0, duration(A → stop → B) - duration(A → B))
@@ -198,8 +198,8 @@ Focused tests cover detour arithmetic, Bayesian sparse-review handling, bounded 
 
 ## Known limitations
 
-- Hackathon scope: one stop, walking/driving, Boston bounding box, six routed candidates per query. A suitable place may be omitted by shortlisting.
-- No transit, Gemini parsing, live traffic, menus, photos, reservations or eating/wait-time estimates.
+- Hackathon scope: one stop, walking/driving/train/bus, Boston bounding box, ten routed candidates per query (shortlisted by popularity from up to 20 fetched places). A suitable place may be omitted by shortlisting.
+- No Gemini parsing, live traffic, menus, photos, reservations or eating/wait-time estimates.
 - In-memory journey cache is lost on restart; refresh a journey after 15 minutes. Single-VM rate limiter/state does not support horizontal scaling.
 - Anonymous session interactions are deduplicated, not abuse-proof or authenticated. No attempt is made to track people across browsers; interaction popularity is not a review signal.
 - Fields absent from Google remain unknown. Strict dietary/price/rating filters exclude unknowns. Provider opening data is not guaranteed current.
@@ -209,7 +209,7 @@ Focused tests cover detour arithmetic, Bayesian sparse-review handling, bounded 
 
 - **0–15s:** “On-the-Go answers: where can I get food on my journey without adding too much travel?” Show Boston University → Boston Common, walking, and point out the demo label.
 - **15–30s:** Find stops. Show direct distance/time and the list. Explain circles vs triangles and bounded popularity sizing.
-- **30–45s:** Choose Coffee, then restore All bites. Try 5-minute maximum detour and vegetarian-reported preference. Results obey calculated detour limits.
+- **30–45s:** Choose Coffee, then restore All bites. Try a 5-minute maximum detour and a price filter. Results obey calculated detour limits.
 - **45–65s:** Select Little Green Kitchen on the map; its card highlights. Click Add stop. Compare Direct versus With a food stop; switch between the two polylines.
 - **65–80s:** Open details, show ratings/price/known hours. Close and open Google Maps for the chosen journey. Explain eating and waiting are excluded.
 - **80–90s:** Show the phone sheet. “The same vertical slice switches to live Routes and Places with restricted keys. Express, Tiger Data, Docker and Caddy run behind one Vultr origin.”
