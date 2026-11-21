@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import pg from 'pg';
-if(!process.env.DATABASE_URL||process.env.DATABASE_URL.includes('YOUR_'))throw new Error('Set DATABASE_URL in .env before running the migration.');
-const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:5000});
+import {validateDatabaseUrl} from './database-config.js';
+const pool=new pg.Pool({connectionString:validateDatabaseUrl(process.env.DATABASE_URL),connectionTimeoutMillis:5000});
 try{await pool.query(`CREATE TABLE IF NOT EXISTS interaction_events (
  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
  place_id TEXT NOT NULL,

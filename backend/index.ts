@@ -11,4 +11,8 @@ if((mode==='live'||process.env.REQUIRE_DATABASE==='true')&&!configured(process.e
 const store=configured(process.env.DATABASE_URL)?new PostgresInteractionStore(process.env.DATABASE_URL!):new MemoryInteractionStore();
 const app=createApp(mode==='demo'?new DemoProvider():new GoogleProvider(process.env.GOOGLE_MAPS_SERVER_KEY!),store,{mode,...(mode==='live'?{browserKey:process.env.GOOGLE_MAPS_BROWSER_KEY,mapId:process.env.GOOGLE_MAP_ID}:{})});
 const server=app.listen(Number(process.env.PORT??3000),'0.0.0.0',()=>console.log(`On-the-Go (${mode}) http://localhost:${process.env.PORT??3000}`));
+server.on('error',(error:NodeJS.ErrnoException)=>{
+ console.error(error.code==='EADDRINUSE'?`Port ${process.env.PORT??3000} is already in use. Stop the previous app server before running npm run dev again.`:`Server could not start (${error.code??'unknown error'}).`);
+ process.exit(1);
+});
 process.on('SIGTERM',()=>server.close(()=>{if(store instanceof PostgresInteractionStore)void store.pool.end();}));
