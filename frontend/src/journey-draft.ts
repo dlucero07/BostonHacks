@@ -1,6 +1,8 @@
 import type {JourneyInput,Location} from '../../shared/schema';
 function sameLocation(a:Location,b:Location){
- return a.label===b.label&&a.placeId===b.placeId&&a.point?.lat===b.point?.lat&&a.point?.lng===b.point?.lng;
+ // The route service resolves typed addresses into coordinates. Those added
+ // coordinates aren't a user edit; compare coordinates only when supplied.
+ return a.label===b.label&&a.placeId===b.placeId&&(!a.point||(a.point.lat===b.point?.lat&&a.point.lng===b.point?.lng));
 }
 export function journeyDraftChanged(draft:JourneyInput,planned:JourneyInput){
  // Device coordinates keep moving, but stop routes belong to the submitted
