@@ -8,8 +8,26 @@ import {DemoProvider,demoPlaces} from '../backend/providers/demo.js';
 import {JourneyService} from '../backend/service.js';
 import {AppError} from '../backend/providers/types.js';
 import {createApp} from '../backend/app.js';
+import {journeyDraftChanged} from '../frontend/src/journey-draft.js';
 const input={origin:{label:'Boston University'},destination:{label:'Boston Common'},mode:'WALK' as const};
 const filters=filterSchema.parse({});
+test('resolving typed addresses leaves food stops enabled, and edits require replanning',async()=>{
+ for(const mode of ['WALK','DRIVE','TRAIN','BUS'] as const){
+  const service=new JourneyService(new DemoProvider(),new MemoryInteractionStore());
+  const draft={...input,mode};
+  const planned=await service.create(draft);
+  assert(planned.origin.point);assert(planned.destination.point);
+  assert.equal(journeyDraftChanged(draft,planned),false);
+  assert.equal(journeyDraftChanged({...draft,origin:{label:'Copley Square'}},planned),true);
+  assert.equal(journeyDraftChanged({...draft,destination:{label:'Fenway Park'}},planned),true);
+  assert.equal(journeyDraftChanged({...draft,mode:mode==='WALK'?'DRIVE':'WALK'},planned),true);
+  const results=await service.search(planned.id,filters);
+  const selected=results.restaurants[0];assert(selected);
+  const added=await service.stops(planned.id,[selected.id]);
+  assert(added.route.path.some(p=>p.lat===selected.point.lat&&p.lng===selected.point.lng));
+  assert.deepEqual(await service.stops(planned.id,[]),{route:planned.baseline,extraSeconds:0});
+ }
+});
 test('detour uses total stop-route duration minus comparable baseline',()=>{assert.equal(extraTravelSeconds(900,1080),180);assert.equal(extraTravelSeconds(900,890),0);assert.throws(()=>extraTravelSeconds(NaN,1));});
 test('Bayesian prior prevents a single 5-star review dominating established quality',()=>{const base=demoPlaces[0];assert(popularity({...base,rating:5,reviewCount:1})<popularity({...base,rating:4.7,reviewCount:500}));for(const n of [0,1,50,1e9]){const score=popularity({...base,reviewCount:n},n);assert(score>=0&&score<=1);assert(markerSize(score)>=24&&markerSize(score)<=64);}});
 test('missing place fields stay unknown and strict filters exclude unknowns',()=>{const place:Place={id:'unknown',name:'Unknown',point:{lat:42.35,lng:-71.08},category:'restaurant',categoryLabel:'Restaurant'};assert(matches(place,filters));assert(!matches(place,{...filters,maxPrice:2}));assert(!matches(place,{...filters,minRating:4}));assert(Number.isFinite(popularity(place)));});
