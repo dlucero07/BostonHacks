@@ -85,18 +85,9 @@ main{max-width:1136px;margin:0 auto;padding:0 0 16px}
 .map-guide{grid-column:1/-1;grid-row:2;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 20px;padding:12px 24px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:#596168}
 .legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:11px}
 .legend span{display:flex;align-items:center;gap:6px}
-.legend-circle{width:9px;height:9px;background:#d26f44;border-radius:50%}
-.legend-triangle{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #c99454}
 .legend-station{width:11px;height:11px;background:#fff;border:3px solid #4285f4;border-radius:50%}
 .legend-walk{width:20px;border-top:3px dotted #5965a6}
 .legend-location{width:12px;height:12px;border:2px solid white;border-radius:50%;background:#2563eb;box-shadow:0 0 0 2px #2563eb44}
-.popularity-key{display:flex;align-items:center;gap:8px}
-.popularity-scale{display:flex;align-items:center;gap:3px}
-.popularity-scale i{width:7px;height:7px;background:#d76c3f;border-radius:50%}
-.popularity-scale i:nth-child(2){width:12px;height:12px}
-.popularity-scale i:nth-child(3){width:18px;height:18px}
-.popularity-key strong{font-size:10px;display:block}
-.popularity-key span{font-size:9px;display:block;margin-top:2px}
 .map-attribution{font-size:9px}
 
 .route-comparison{grid-column:2;grid-row:1;overflow:auto;max-height:350px;padding:20px;border-left:1px solid var(--line)}
@@ -120,7 +111,7 @@ main{max-width:1136px;margin:0 auto;padding:0 0 16px}
 .journey-stops{list-style:none;padding:0;display:grid;gap:6px;margin:12px 0}
 .journey-stops li{display:flex;gap:8px;align-items:center;font-size:12px}
 .journey-stops li>span:nth-child(2){flex:1}
-.stop-number{display:grid;place-items:center;border-radius:50%;width:24px;height:24px;background:var(--blue);color:#fff;font-size:11px}
+.stop-number{display:grid;place-items:center;border-radius:50%;width:24px;height:24px;background:#fff500;color:#171b1f;border:1.5px solid #171b1f;font-size:12px;font-weight:700}
 .journey-stops button{display:grid;place-items:center}
 .transit-directions{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
 .transit-directions h3{font-size:13px;font-weight:700;margin:0 0 10px}
@@ -147,7 +138,7 @@ main{max-width:1136px;margin:0 auto;padding:0 0 16px}
 .restaurant-card.line-3{--row:#e9231b}
 .restaurant-card.selected{box-shadow:inset 7px 0 0 currentColor}
 .stop-identity{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
-.food-line-badge{display:grid;place-items:center;width:57px;height:57px;border-radius:50%;background:var(--ink);color:var(--row);font-size:31px;font-weight:800;letter-spacing:-1px;line-height:1}
+.food-line-badge{display:grid;place-items:center;width:57px;height:57px;border-radius:55% 45% 54% 34%;background:#fff500;color:#171b1f;border:2px solid #171b1f;box-shadow:2px 3px 0 #171b1f;font-size:31px;font-weight:800;letter-spacing:-1px;line-height:1}
 .food-category{display:flex;align-items:center;gap:6px;font-size:11px;line-height:1.4}
 .stop-info{min-width:0;padding-top:2px}
 .place-name{display:flex;align-items:baseline;gap:10px;text-align:left;font-size:30px;font-weight:700;letter-spacing:-.8px;line-height:1.12;padding:0;min-height:0}
@@ -195,11 +186,19 @@ main{max-width:1136px;margin:0 auto;padding:0 0 16px}
 .detail-modal small{display:block;color:var(--muted);font-size:11px;line-height:1.6;margin-top:20px}
 
 .svg-marker{cursor:pointer}
-.svg-marker:focus-visible{outline:3px solid var(--blue)}
-.google-food-marker{border:3px solid white;border-radius:50%;background:#d76c3f;color:white;box-shadow:0 2px 6px #0003;display:grid;place-items:center;font-size:22px}
-.google-food-marker.triangle{background:#c99454;clip-path:polygon(50% 0,100% 100%,0 100%);border-radius:0}
-.google-food-marker.selected{background:#173c32;outline:5px solid #173c3230}
-.google-endpoint{width:34px;height:34px;display:grid;place-items:center;background:#4285f4;color:#fff;border:4px solid white;border-radius:50%;font-weight:700;font-size:12px;box-shadow:0 2px 5px #0003}
+.svg-marker:focus-visible{outline:none}
+.svg-food-pin-shadow{fill:#171b1f}
+.svg-food-pin{fill:#fff500;stroke:#171b1f;stroke-width:2.5px}
+.svg-food-letter{fill:#171b1f;font-size:21px;font-weight:750;pointer-events:none}
+.svg-marker.is-selected .svg-food-pin,.svg-marker:focus-visible .svg-food-pin{fill:#171b1f;stroke:#fff500;stroke-width:3.5px}
+.svg-marker.is-selected .svg-food-letter,.svg-marker:focus-visible .svg-food-letter{fill:#fff500}
+.google-food-marker{position:relative;display:grid;place-items:center;width:38px;height:38px;min-height:38px;padding:0;border:2.5px solid #171b1f;border-radius:55% 45% 54% 34%;background:#fff500;color:#171b1f;box-shadow:2px 3px 0 #171b1f;font-size:20px;font-weight:750;line-height:1;transition:transform .15s}
+.google-food-marker:hover{transform:translateY(-3px)}
+.google-food-marker.selected{background:#171b1f;color:#fff500;outline:3px solid #fff500;outline-offset:1px}
+.google-food-marker.on-route::after{content:'✓';position:absolute;top:-7px;right:-7px;display:grid;place-items:center;width:16px;height:16px;border:1.5px solid white;border-radius:50%;background:#171b1f;color:white;font-size:11px}
+.legend-food-letter{display:grid;place-items:center;width:22px;height:22px;border:1.5px solid #171b1f;border-radius:55% 45% 54% 34%;background:#fff500;color:#171b1f;box-shadow:1px 1px 0 #171b1f;font-size:12px;font-weight:750;font-style:normal}
+.legend-added{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#171b1f;color:white;font-size:11px;font-style:normal}
+.google-endpoint{width:auto;min-width:48px;height:32px;padding:0 8px;display:grid;place-items:center;background:#4285f4;color:#fff;border:2px solid white;border-radius:5px;font-weight:700;font-size:12px;box-shadow:0 2px 5px #0003}
 .google-transit-stop,.transit-stop-dot{width:18px;height:18px}
 .transit-stop-dot{display:block;background:#fff;border:4px solid var(--transit-color);border-radius:50%;box-shadow:0 1px 5px #0003}
 .google-live-location{width:19px;height:19px;border:3px solid white;border-radius:50%;background:#2563eb;box-shadow:0 1px 6px #0005}
@@ -244,7 +243,6 @@ main{margin:0 14px}
 .map-panel{height:300px}
 .map-guide{grid-row:2;padding:10px 14px;gap:8px}
 .legend{font-size:10px;gap:10px}
-.popularity-key{margin-left:auto}
 .map-attribution{font-size:9px}
 .route-comparison{grid-column:1;grid-row:3;max-height:none;border-left:0;padding:16px;border-bottom:1px solid var(--line)}
 .route-comparison-title{margin-bottom:10px}
@@ -294,7 +292,6 @@ main{margin:0 14px}
 .place-name{font-size:23px}
 .detour-time strong{font-size:56px}
 .map-panel{height:260px}
-.popularity-key{margin-left:0}
 .page-footer{padding:18px 16px}
 }
 
