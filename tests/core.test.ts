@@ -11,6 +11,18 @@ import {createApp} from '../backend/app.js';
 import {journeyDraftChanged} from '../frontend/src/journey-draft.js';
 const input={origin:{label:'Boston University'},destination:{label:'Boston Common'},mode:'WALK' as const};
 const filters=filterSchema.parse({});
+test('rating defaults to three stars and search honors every threshold from zero to five',async()=>{
+ assert.equal(filters.minRating,3);
+ for(const minRating of [-1,5.1])assert.equal(filterSchema.safeParse({minRating}).success,false);
+ const provider=new DemoProvider();
+ const candidates=[undefined,0,1,2,2.9,3,3.9,4,4.5,5].map((rating,i)=>({...demoPlaces[0],id:`rating-${i}`,rating}));
+ provider.search=async()=>candidates;
+ const service=new JourneyService(provider,new MemoryInteractionStore());const journey=await service.create(input);
+ for(const minRating of [0,1,2,3,4,4.5,5]){
+  const result=await service.search(journey.id,filterSchema.parse({minRating}));
+  assert.deepEqual(new Set(result.restaurants.map(p=>p.id)),new Set(candidates.filter(p=>minRating===0||p.rating!==undefined&&p.rating>=minRating).map(p=>p.id)));
+ }
+});
 test('resolving typed addresses leaves food stops enabled, and edits require replanning',async()=>{
  for(const mode of ['WALK','DRIVE','TRAIN','BUS'] as const){
   const service=new JourneyService(new DemoProvider(),new MemoryInteractionStore());
@@ -30,7 +42,7 @@ test('resolving typed addresses leaves food stops enabled, and edits require rep
 });
 test('detour uses total stop-route duration minus comparable baseline',()=>{assert.equal(extraTravelSeconds(900,1080),180);assert.equal(extraTravelSeconds(900,890),0);assert.throws(()=>extraTravelSeconds(NaN,1));});
 test('Bayesian prior prevents a single 5-star review dominating established quality',()=>{const base=demoPlaces[0];assert(popularity({...base,rating:5,reviewCount:1})<popularity({...base,rating:4.7,reviewCount:500}));for(const n of [0,1,50,1e9]){const score=popularity({...base,reviewCount:n},n);assert(score>=0&&score<=1);assert(markerSize(score)>=24&&markerSize(score)<=64);}});
-test('missing place fields stay unknown and strict filters exclude unknowns',()=>{const place:Place={id:'unknown',name:'Unknown',point:{lat:42.35,lng:-71.08},category:'restaurant',categoryLabel:'Restaurant'};assert(matches(place,filters));assert(!matches(place,{...filters,maxPrice:2}));assert(!matches(place,{...filters,minRating:4}));assert(Number.isFinite(popularity(place)));});
+test('missing place fields stay unknown and strict filters exclude unknowns',()=>{const place:Place={id:'unknown',name:'Unknown',point:{lat:42.35,lng:-71.08},category:'restaurant',categoryLabel:'Restaurant'};assert(!matches(place,filters));assert(matches(place,{...filters,minRating:0}));assert(!matches(place,{...filters,maxPrice:2}));assert(!matches(place,{...filters,minRating:4}));assert(Number.isFinite(popularity(place)));});
 test('interactions deduplicate event types per session; popularity counts unique sessions',async()=>{const store=new MemoryInteractionStore();const sessionId=randomUUID();const e={placeId:'demo-1',eventType:'select' as const,sessionId};assert(await store.record(e));assert.equal(await store.record(e),false);await store.record({...e,eventType:'details'});assert.equal((await store.counts()).get('demo-1'),1);await store.record({...e,sessionId:randomUUID()});assert.equal((await store.counts()).get('demo-1'),2);});
 test('complete simulated A → restaurant → B flow and enforced constraints',async()=>{const service=new JourneyService(new DemoProvider(),new MemoryInteractionStore());const j=await service.create(input);assert(j.baseline.simulated);const f={...filters,maxDetour:5 as const,maxPrice:1};const result=await service.search(j.id,f);assert(result.restaurants.length>0);for(const p of result.restaurants){assert(p.extraSeconds<=300);assert.equal(p.price,1);}const p=result.restaurants[0];const stop=await service.stop(j.id,p.id);assert.equal(stop.extraSeconds,stop.route.durationSeconds-j.baseline.durationSeconds);assert(stop.route.path.some(x=>x.lat===p.point.lat&&x.lng===p.point.lng));assert.equal(enforceDetour([{...p,extraSeconds:301,score:100}],f).length,0);});
 test('provider failures never fabricate routes or stops',async()=>{const provider=new DemoProvider();provider.route=async()=>{throw new AppError(502,'PROVIDER_UNAVAILABLE','Provider down');};await assert.rejects(new JourneyService(provider,new MemoryInteractionStore()).create(input),/Provider down/);});
@@ -43,11 +55,11 @@ test('all four travel modes produce complete journeys and mode-specific demo est
  const durations=new Set<number>();for(const mode of ['WALK','DRIVE','TRAIN','BUS'] as const){const parsed=journeySchema.parse({...input,mode});const service=new JourneyService(new DemoProvider(),new MemoryInteractionStore());const journey=await service.create(parsed);assert.equal(journey.mode,mode);durations.add(journey.baseline.durationSeconds);const result=await service.search(journey.id,filters);assert(result.restaurants.length>0);const stop=await service.stop(journey.id,result.restaurants[0].id);assert(stop.route.durationSeconds>=journey.baseline.durationSeconds);}assert.equal(durations.size,4);
 });
 
-test('search shortlists and returns ten food stops from twenty candidates',async()=>{
- const provider=new DemoProvider();const candidates=Array.from({length:20},(_,i)=>({...demoPlaces[0],id:`candidate-${i}`,reviewCount:i*100}));provider.search=async()=>candidates;
+test('search shortlists and returns twenty food stops from thirty candidates',async()=>{
+ const provider=new DemoProvider();const candidates=Array.from({length:30},(_,i)=>({...demoPlaces[0],id:`candidate-${i}`,reviewCount:i*100}));provider.search=async()=>candidates;
  const originalRoute=provider.route.bind(provider);let stopRoutes=0;provider.route=async(input,stop)=>{if(stop)stopRoutes++;return originalRoute(input,stop);};
  const service=new JourneyService(provider,new MemoryInteractionStore());const journey=await service.create(input);const result=await service.search(journey.id,filters);
- assert.equal(result.restaurants.length,10);assert.equal(stopRoutes,10);assert.deepEqual(new Set(result.restaurants.map(p=>p.id)),new Set(candidates.slice(10).map(p=>p.id)));assert(result.restaurants.every((p,i,list)=>i===0||list[i-1].score>=p.score));
+ assert.equal(result.restaurants.length,20);assert.equal(stopRoutes,20);assert.deepEqual(new Set(result.restaurants.map(p=>p.id)),new Set(candidates.slice(10).map(p=>p.id)));assert(result.restaurants.every((p,i,list)=>i===0||list[i-1].score>=p.score));
  assert.equal('vegetarian' in filterSchema.parse({vegetarian:true}),false);
 });
 

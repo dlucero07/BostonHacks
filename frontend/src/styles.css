@@ -52,7 +52,6 @@ main{max-width:1136px;margin:0 auto;padding:0 0 16px}
 .location-status{font-size:11px}
 
 .filter-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;padding:14px 24px;border-bottom:1px solid var(--line);margin:0}
-.filter-title{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13px;margin-right:4px}
 .category-filters{display:flex;gap:4px}
 .chip{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;padding:7px 12px;border-radius:3px}
 .chip.active{background:#242a30;color:#fff}
@@ -138,7 +137,7 @@ main{max-width:1136px;margin:0 auto;padding:0 0 16px}
 .restaurant-card.line-3{--row:#e9231b}
 .restaurant-card.selected{box-shadow:inset 7px 0 0 currentColor}
 .stop-identity{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
-.food-line-badge{display:grid;place-items:center;width:57px;height:57px;border-radius:55% 45% 54% 34%;background:#fff500;color:#171b1f;border:2px solid #171b1f;box-shadow:2px 3px 0 #171b1f;font-size:31px;font-weight:800;letter-spacing:-1px;line-height:1}
+.food-line-badge{display:grid;place-items:center;width:57px;height:57px;border-radius:50%;background:#fff;color:#171b1f;border:2px solid #171b1f;box-shadow:2px 3px 0 #171b1f;padding:6px;overflow:hidden;font-size:31px;font-weight:800;letter-spacing:-1px;line-height:1}
 .food-category{display:flex;align-items:center;gap:6px;font-size:11px;line-height:1.4}
 .stop-info{min-width:0;padding-top:2px}
 .place-name{display:flex;align-items:baseline;gap:10px;text-align:left;font-size:30px;font-weight:700;letter-spacing:-.8px;line-height:1.12;padding:0;min-height:0}
@@ -187,18 +186,17 @@ main{max-width:1136px;margin:0 auto;padding:0 0 16px}
 
 .svg-marker{cursor:pointer}
 .svg-marker:focus-visible{outline:none}
-.svg-food-pin-shadow{fill:#171b1f}
-.svg-food-pin{fill:#fff500;stroke:#171b1f;stroke-width:2.5px}
-.svg-food-letter{fill:#171b1f;font-size:21px;font-weight:750;pointer-events:none}
-.svg-marker.is-selected .svg-food-pin,.svg-marker:focus-visible .svg-food-pin{fill:#171b1f;stroke:#fff500;stroke-width:3.5px}
-.svg-marker.is-selected .svg-food-letter,.svg-marker:focus-visible .svg-food-letter{fill:#fff500}
-.google-food-marker{position:relative;display:grid;place-items:center;width:38px;height:38px;min-height:38px;padding:0;border:2.5px solid #171b1f;border-radius:55% 45% 54% 34%;background:#fff500;color:#171b1f;box-shadow:2px 3px 0 #171b1f;font-size:20px;font-weight:750;line-height:1;transition:transform .15s}
+.svg-food-pin{fill:#fff;stroke:#171b1f;stroke-width:2.5px}
+.svg-marker.is-selected .svg-food-pin,.svg-marker:focus-visible .svg-food-pin{fill:#fff;stroke:#fff500;stroke-width:4px}
+.google-food-marker{position:relative;display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:5px;border:2.5px solid #171b1f;border-radius:50%;background:white;box-shadow:1px 2px 0 #171b1f;transition:transform .15s}
 .google-food-marker:hover{transform:translateY(-3px)}
-.google-food-marker.selected{background:#171b1f;color:#fff500;outline:3px solid #fff500;outline-offset:1px}
+.google-food-marker.selected{background:white;outline:3px solid #fff500;outline-offset:1px}
 .google-food-marker.on-route::after{content:'✓';position:absolute;top:-7px;right:-7px;display:grid;place-items:center;width:16px;height:16px;border:1.5px solid white;border-radius:50%;background:#171b1f;color:white;font-size:11px}
-.legend-food-letter{display:grid;place-items:center;width:22px;height:22px;border:1.5px solid #171b1f;border-radius:55% 45% 54% 34%;background:#fff500;color:#171b1f;box-shadow:1px 1px 0 #171b1f;font-size:12px;font-weight:750;font-style:normal}
+.place-logo{display:block;width:100%;height:100%;object-fit:contain;border-radius:50%;pointer-events:none}
+.brand-icon img{width:100%;height:100%}
+.stop-number{background:white;padding:2px;overflow:hidden}
 .legend-added{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#171b1f;color:white;font-size:11px;font-style:normal}
-.google-endpoint{width:auto;min-width:48px;height:32px;padding:0 8px;display:grid;place-items:center;background:#4285f4;color:#fff;border:2px solid white;border-radius:5px;font-weight:700;font-size:12px;box-shadow:0 2px 5px #0003}
+.google-endpoint{width:auto;min-width:34px;height:24px;padding:0 6px;display:grid;place-items:center;background:#4285f4;color:#fff;border:2px solid white;border-radius:4px;font-weight:700;font-size:10px;box-shadow:0 2px 5px #0003}
 .google-transit-stop,.transit-stop-dot{width:18px;height:18px}
 .transit-stop-dot{display:block;background:#fff;border:4px solid var(--transit-color);border-radius:50%;box-shadow:0 1px 5px #0003}
 .google-live-location{width:19px;height:19px;border:3px solid white;border-radius:50%;background:#2563eb;box-shadow:0 1px 6px #0005}
@@ -234,7 +232,7 @@ main{margin:0 14px}
 .planner-caption>span{display:none}
 .planner-caption{font-size:10px}
 .filter-bar{padding:10px 14px;gap:8px;flex-wrap:wrap}
-.filter-title,.filter-divider{display:none}
+.filter-divider{display:none}
 .category-filters{width:100%;gap:4px}
 .chip{flex:1;padding:6px 8px;font-size:12px}
 .more-filters{margin-left:auto}
@@ -363,3 +361,5 @@ main{margin:0 14px}
 
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
 }
+
+.legend-food-logo{display:grid;place-items:center;width:23px;height:23px;border:1px solid #171b1f;border-radius:50%;background:white;padding:2px}

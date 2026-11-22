@@ -45,7 +45,7 @@ Uses [Routes computeRoutes](https://developers.google.com/maps/documentation/rou
 
 ### Costs, attribution and retention
 
-Search runs on submit or an explicit filter change, never on map movement. Text Search requests at most 20 candidates; inexpensive filters and place-ID deduplication precede at most ten stop-route calculations with concurrency three. Stop routes are reused in the current journey. Details are fetched on demand. Transit stop calculations use up to twenty leg requests for ten candidates. REST calls time out after 10 seconds with no automatic retries; quota/auth failures stop queued route work. Requests already in flight may complete. Autocomplete is sessionized and debounced.
+Search runs on submit or an explicit filter change, never on map movement. Text Search requests at most 20 candidates; inexpensive filters and place-ID deduplication precede at most twenty stop-route calculations with concurrency three. Stop routes are reused in the current journey. Details are fetched on demand. Transit stop calculations use up to forty leg requests for twenty candidates. REST calls time out after 10 seconds with no automatic retries; quota/auth failures stop queued route work. Requests already in flight may complete. Autocomplete is sessionized and debounced.
 
 Field masks are explicit. Ratings, review counts, price and opening status trigger higher Places pricing tiers; vegetarian support is temporarily disabled, and `servesVegetarianFood` is omitted from both search and details requests to avoid Enterprise + Atmosphere pricing. TODO comments in the provider mask, shared filter schema, and frontend filter UI mark where to restore support. Review the [field/SKU table](https://developers.google.com/maps/documentation/places/web-service/data-fields) before enabling live mode. Configure per-API quotas and Cloud Billing budgets/alerts in Google Cloud. **Budget alerts are notifications, not a spending cap.** Choose actual enforceable quotas appropriate to your account.
 
@@ -102,7 +102,7 @@ markerDiameter = 24 + 40 × popularity² (pixels)
 relevance = 0.45 × popularity + 0.55 × (1 - clamp(extraSeconds / maxDetourSeconds, 0, 1))
 ```
 
-Unknown rating uses the 4.1 prior and unknown review count uses zero **for scoring only**; the UI shows unknown. Interaction popularity counts unique sessions per place across all event types in the last seven days, so clicking details and adding the same stop does not inflate it. Event types are individually deduplicated per session. Automatic/programmatic state changes do not record clicks. Empty interaction data contributes zero. No recent-review signal is used because coverage/timestamps are unavailable. Filter match is a hard gate: category, known price/rating thresholds and **maximum calculated detour** always override popularity.
+Unknown rating uses the 4.1 prior and unknown review count uses zero **for scoring only**; the UI shows unknown. Interaction popularity counts unique sessions per place across all event types in the last seven days, so clicking details and adding the same stop does not inflate it. Event types are individually deduplicated per session. Automatic/programmatic state changes do not record clicks. Empty interaction data contributes zero. No recent-review signal is used because coverage/timestamps are unavailable. The minimum rating defaults to 3+ stars and can be set from 0 (any rating, including unrated places) to 5 stars. Filter match is a hard gate: category, known price/rating thresholds and **maximum calculated detour** always override popularity.
 
 ```
 extraTravelSeconds = max(0, duration(A → stop → B) - duration(A → B))
@@ -198,7 +198,7 @@ Focused tests cover detour arithmetic, Bayesian sparse-review handling, bounded 
 
 ## Known limitations
 
-- Hackathon scope: one stop, walking/driving/train/bus, Boston bounding box, ten routed candidates per query (shortlisted by popularity from up to 20 fetched places). A suitable place may be omitted by shortlisting.
+- Hackathon scope: one stop, walking/driving/train/bus, Boston bounding box, twenty routed candidates per query (shortlisted by popularity from up to 20 fetched places). A suitable place may be omitted by shortlisting.
 - No Gemini parsing, live traffic, menus, photos, reservations or eating/wait-time estimates.
 - In-memory journey cache is lost on restart; refresh a journey after 15 minutes. Single-VM rate limiter/state does not support horizontal scaling.
 - Anonymous session interactions are deduplicated, not abuse-proof or authenticated. No attempt is made to track people across browsers; interaction popularity is not a review signal.
@@ -209,7 +209,7 @@ Focused tests cover detour arithmetic, Bayesian sparse-review handling, bounded 
 
 - **0–15s:** “On-the-Go answers: where can I get food on my journey without adding too much travel?” Show Boston University → Boston Common, walking, and point out the demo label.
 - **15–30s:** Find stops. Show direct distance/time and the list. Explain circles vs triangles and bounded popularity sizing.
-- **30–45s:** Choose Coffee, then restore All bites. Try a 5-minute maximum detour and a price filter. Results obey calculated detour limits.
+- **30–45s:** Choose Coffee, then return to Restaurants. Try a 5-minute maximum detour and a price filter. Results obey calculated detour limits.
 - **45–65s:** Select Little Green Kitchen on the map; its card highlights. Click Add stop. Compare Direct versus With a food stop; switch between the two polylines.
 - **65–80s:** Open details, show ratings/price/known hours. Close and open Google Maps for the chosen journey. Explain eating and waiting are excluded.
 - **80–90s:** Show the phone sheet. “The same vertical slice switches to live Routes and Places with restricted keys. Express, Tiger Data, Docker and Caddy run behind one Vultr origin.”
