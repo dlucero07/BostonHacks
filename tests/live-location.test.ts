@@ -40,6 +40,14 @@ test('demo map displays a real location with accuracy or explains when it is bey
  const outside=renderToStaticMarkup(createElement(MapView,{...props,liveLocation:{point:{lat:42.4,lng:-71.2},accuracy:12,timestamp:Date.now()}}));assert.match(outside,/outside this illustrated map/);
  const off=renderToStaticMarkup(createElement(MapView,props));assert.doesNotMatch(off,/Your live location/);
 });
+test('demo map zoom controls use viewBox zooming and allow zoom-in from the default level',()=>{
+ const html=renderToStaticMarkup(createElement(MapView,{config:{mode:'demo' as const},places:[],stops:[],onSelect:()=>{}}));
+ assert.match(html,/viewBox="0 0 1000 800"/);
+ assert.match(html,/aria-label="Zoom in"/);
+ assert.match(html,/aria-label="Zoom out"/);
+ assert.doesNotMatch(html,/scale\(/);
+ assert.doesNotMatch(html,/aria-label="Zoom in"[^>]*disabled/);
+});
 
 test('unavailable high-accuracy location retries with a general fix and ignores the abandoned watch',()=>{
  const positions:PositionCallback[]=[],errors:(PositionErrorCallback|null|undefined)[]=[],options:(PositionOptions|undefined)[]=[],cleared:number[]=[];
